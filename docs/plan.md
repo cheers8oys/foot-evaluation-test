@@ -1,5 +1,7 @@
 # 시즈탱크 발 유형 테스트 구현 계획
 
+> 프로젝트 공통 보안, TDD, 검증, Git 작업 제약은 루트 `AGENTS.md`를 우선한다.
+
 기준 문서:
 
 - `siztank-foot-type-test-prd-v1.2-implementation.md`
@@ -8,7 +10,7 @@
 
 ## 1. 구현 목표
 
-모바일 우선 웹 MVP로 8문항 A/B 발 유형 테스트를 구현한다. 사용자는 테스트를 완료한 뒤 휴대폰 번호와 단일 동의를 제출하고, 신규 번호인 경우 Google Sheets 저장 후 알림톡 또는 SMS로 결과지 링크를 받는다. 기존 번호는 중복 저장 및 중복 발송하지 않고 기존 결과지로 안내한다.
+모바일 우선 웹 MVP로 8문항 A/B 발 유형 테스트를 구현한다. 사용자는 테스트를 완료한 뒤 이름, 휴대폰 번호, 단일 동의를 제출하고, 신규 번호인 경우 Google Sheets 저장 후 알림톡 또는 SMS로 결과지 링크를 받는다. 기존 번호는 중복 저장 및 중복 발송하지 않고 기존 결과지로 안내한다.
 
 ## 2. 핵심 범위
 
@@ -27,7 +29,6 @@
 
 ### 제외
 
-- 이름 입력
 - 관리자 대시보드
 - CAPTCHA, IP 기반 rate limit
 - 전화번호 암복호화 저장
@@ -89,7 +90,7 @@ src/
 ### 답변
 
 ```ts
-type Answer = 'A' | 'B';
+type Answer = "A" | "B";
 
 type Answers = {
   q1: Answer;
@@ -106,7 +107,7 @@ type Answers = {
 ### 결과
 
 ```ts
-type CaseId = 'case1' | 'case2' | 'case3' | 'case4' | 'default';
+type CaseId = "case1" | "case2" | "case3" | "case4" | "default";
 
 type DiagnosisResult = {
   primaryCase: CaseId;
@@ -116,12 +117,13 @@ type DiagnosisResult = {
 
 ### Google Sheets 컬럼
 
-| 컬럼 | 필드 | 설명 |
-|---|---|---|
-| A | `createdAt` | ISO timestamp |
-| B | `phone` | 숫자만 남긴 `01012345678` 형식 |
-| C | `resultType` | 대표 결과 case ID |
-| D | `consentVersion` | 예: `v1` |
+| 컬럼 | 필드             | 설명                                  |
+| ---- | ---------------- | ------------------------------------- |
+| A    | `createdAt`      | ISO timestamp                         |
+| B    | `name`           | trim된 사용자 이름                    |
+| C    | `phone`          | 숫자만 남긴 `<NORMALIZED_PHONE>` 형식 |
+| D    | `resultType`     | 대표 결과 case ID                     |
+| E    | `consentVersion` | 예: `v1`                              |
 
 ## 5. 라우트 구현 계획
 
@@ -152,9 +154,11 @@ type DiagnosisResult = {
 
 ### `/quiz/contact`
 
-- 전화번호 입력, 단일 동의 체크박스, 개인정보 고지, `/privacy` 링크, 제출 CTA를 표시한다.
+- 이름 입력, 전화번호 입력, 단일 동의 체크박스, 개인정보 고지, `/privacy` 링크, 제출 CTA를 표시한다.
+- 이름은 서버에서 trim 후 1~30자 문자열인지 검증한다.
 - 전화번호는 입력 중 하이픈을 허용하되 서버에는 원본을 전달하고 서버에서 정규화한다.
 - CTA 활성 조건:
+  - 이름이 trim 후 1자 이상
   - 국내 휴대폰 번호 기본 형식 충족
   - 단일 체크박스 선택
   - 답변, 결과값, startToken 존재
@@ -216,21 +220,22 @@ type DiagnosisResult = {
 처리 순서:
 
 1. request body schema 검증
-2. 전화번호를 숫자만 남겨 정규화
-3. `^010\\d{8}$` 검증
-4. 단일 동의 여부 검증
-5. startToken 존재, 서명, 만료 검증
-6. 토큰 발급 후 15초 미만 제출 차단
-7. 답변 8개와 값 범위 검증
-8. 서버에서 `answers` 기준 결과 재계산
-9. 클라이언트가 보낸 `primaryCase`, `matchedCases`와 불일치하면 서버 계산값을 우선 사용
-10. Google Sheets에서 정규화 전화번호 중복 확인
-11. 중복이면 기존 row의 `resultType`으로 결과 URL을 만들고 `duplicate` 응답
-12. 신규이면 쓰기 직전 한 번 더 중복 확인
-13. 신규 row 저장
-14. 문자온 알림톡 또는 SMS 발송
-15. 발송 성공 시 `created` 응답
-16. 발송 실패 시 `MESSAGE_SEND_FAILED` 500 응답
+2. 이름을 trim하고 1~30자 문자열인지 검증
+3. 전화번호를 숫자만 남겨 정규화
+4. `^010\\d{8}$` 검증
+5. 단일 동의 여부 검증
+6. startToken 존재, 서명, 만료 검증
+7. 토큰 발급 후 15초 미만 제출 차단
+8. 답변 8개와 값 범위 검증
+9. 서버에서 `answers` 기준 결과 재계산
+10. 클라이언트가 보낸 `primaryCase`, `matchedCases`와 불일치하면 서버 계산값을 우선 사용
+11. Google Sheets에서 정규화 전화번호 중복 확인
+12. 중복이면 기존 row의 `resultType`으로 결과 URL을 만들고 `duplicate` 응답
+13. 신규이면 쓰기 직전 한 번 더 중복 확인
+14. 신규 row 저장
+15. 문자온 알림톡 또는 SMS 발송
+16. 발송 성공 시 `created` 응답
+17. 발송 실패 시 `MESSAGE_SEND_FAILED` 500 응답
 
 중복 응답:
 
@@ -258,18 +263,18 @@ type DiagnosisResult = {
 
 조건:
 
-| Case ID | 결과명 | 조건 |
-|---|---|---|
-| `case1` | 전방 중심 붕괴형 | `q1 === 'B' && q4 === 'B' && q5 === 'B'` |
-| `case2` | 발 기능 붕괴형 | `q2 === 'B' && q3 === 'B' && q7 === 'B'` |
-| `case3` | 호흡-코어 붕괴형 | `q5 === 'B' && q6 === 'B'` |
-| `case4` | 비대칭 누적형 | `q1 === 'B' && q2 === 'B' && q8 === 'B'` |
-| `default` | 기본 균형/초기 보상형 | 위 조건 중 없음 |
+| Case ID   | 결과명                | 조건                                     |
+| --------- | --------------------- | ---------------------------------------- |
+| `case1`   | 전방 중심 붕괴형      | `q1 === 'B' && q4 === 'B' && q5 === 'B'` |
+| `case2`   | 발 기능 붕괴형        | `q2 === 'B' && q3 === 'B' && q7 === 'B'` |
+| `case3`   | 호흡-코어 붕괴형      | `q5 === 'B' && q6 === 'B'`               |
+| `case4`   | 비대칭 누적형         | `q1 === 'B' && q2 === 'B' && q8 === 'B'` |
+| `default` | 기본 균형/초기 보상형 | 위 조건 중 없음                          |
 
 대표 결과 우선순위:
 
 ```ts
-const CASE_PRIORITY = ['case4', 'case2', 'case1', 'case3', 'default'] as const;
+const CASE_PRIORITY = ["case4", "case2", "case1", "case3", "default"] as const;
 ```
 
 동일한 `diagnose()` 함수를 클라이언트 결과 계산과 서버 제출 검증에서 공유한다.
@@ -278,12 +283,12 @@ const CASE_PRIORITY = ['case4', 'case2', 'case1', 'case3', 'default'] as const;
 
 `sessionStorage` 키:
 
-| 키 | 내용 |
-|---|---|
+| 키                        | 내용                        |
+| ------------------------- | --------------------------- |
 | `siztank_test_started_at` | 테스트 시작 시각 ISO string |
-| `siztank_start_token` | 서버 서명 토큰 |
-| `siztank_answers` | `Answers` JSON |
-| `siztank_result` | `DiagnosisResult` JSON |
+| `siztank_start_token`     | 서버 서명 토큰              |
+| `siztank_answers`         | `Answers` JSON              |
+| `siztank_result`          | `DiagnosisResult` JSON      |
 
 공통 유틸:
 
@@ -306,6 +311,7 @@ const CASE_PRIORITY = ['case4', 'case2', 'case1', 'case3', 'default'] as const;
 - 시트는 공개 링크를 만들지 않는다.
 - 저장 전후로 중복 번호를 확인한다.
 - 저장 실패는 `SHEET_WRITE_FAILED`로 처리한다.
+- MVP에서는 이름을 trim된 평문으로 저장한다.
 - MVP에서는 전화번호를 정규화된 평문으로 저장한다.
 
 ### 문자온 알림톡/SMS
@@ -316,9 +322,9 @@ const CASE_PRIORITY = ['case4', 'case2', 'case1', 'case3', 'default'] as const;
 - 성공 판정:
 
 ```ts
-response.resultCode === '0' &&
-response.data?.resultCode === '0' &&
-Number(response.data?.successCnt ?? 0) > 0
+response.resultCode === "0" &&
+  response.data?.resultCode === "0" &&
+  Number(response.data?.successCnt ?? 0) > 0;
 ```
 
 - 기존 번호에는 발송 API를 호출하지 않는다.
@@ -363,7 +369,7 @@ Number(response.data?.successCnt ?? 0) > 0
 
 - 질문 상수와 결과 콘텐츠 상수를 작성한다.
 - `diagnose()`와 결과 URL 생성/검증 유틸을 구현한다.
-- 전화번호 정규화와 검증 유틸을 구현한다.
+- 이름 trim/검증 유틸과 전화번호 정규화/검증 유틸을 구현한다.
 - `sessionStorage` 유틸을 구현한다.
 - 진단 로직과 URL 검증 단위 테스트를 작성한다.
 
@@ -424,11 +430,12 @@ Number(response.data?.successCnt ?? 0) > 0
 - 새로고침 후 30분 이내 상태 복원
 - 30분 이후 접근 시 초기화
 - `/quiz/contact` 직접 접근 시 답변/결과 없으면 홈 이동
+- 이름 미입력 오류 표시
 - 국내 휴대폰 번호 형식 오류 표시
 - 동의 체크 전 제출 불가
 - 서버에서 15초 미만 제출 차단
 - 서버에서 답변 기준 결과 재계산
-- 신규 번호는 Google Sheets에 1회 저장
+- 신규 번호는 이름과 함께 Google Sheets에 1회 저장
 - 기존 번호는 저장 및 발송 반복 없음
 - 발송 실패 시 재시도 가능한 오류 표시
 - `primary`, `cases` URL 검증 동작
@@ -448,14 +455,14 @@ Number(response.data?.successCnt ?? 0) > 0
 
 ## 14. 주요 리스크와 대응
 
-| 리스크 | 대응 |
-|---|---|
-| 단일 체크박스 문구의 법적 적합성 불확실 | 문구를 상수화하고 배포 전 교체 가능하게 구현 |
-| Google Sheets 동시 제출 중복 가능성 | 검색 후 쓰기 직전 재검색 수행 |
-| 메시지 발송 실패 후 row는 저장된 상태가 됨 | PRD 정책대로 롤백하지 않고 사용자에게 재시도 오류 표시 |
-| 알림톡 심사 지연 | `MESSAGE_PROVIDER=sms`로 베타 발송 가능하게 구현 |
-| 결과 URL 조작 | `/result`와 `/quiz/submitted`에서 내부 URL 및 case 파라미터 검증 |
-| 클라이언트 결과 조작 | `/api/submit`에서 answers 기준으로 항상 서버 재계산 |
+| 리스크                                     | 대응                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------- |
+| 단일 체크박스 문구의 법적 적합성 불확실    | 문구를 상수화하고 배포 전 교체 가능하게 구현                     |
+| Google Sheets 동시 제출 중복 가능성        | 검색 후 쓰기 직전 재검색 수행                                    |
+| 메시지 발송 실패 후 row는 저장된 상태가 됨 | PRD 정책대로 롤백하지 않고 사용자에게 재시도 오류 표시           |
+| 알림톡 심사 지연                           | `MESSAGE_PROVIDER=sms`로 베타 발송 가능하게 구현                 |
+| 결과 URL 조작                              | `/result`와 `/quiz/submitted`에서 내부 URL 및 case 파라미터 검증 |
+| 클라이언트 결과 조작                       | `/api/submit`에서 answers 기준으로 항상 서버 재계산              |
 
 ## 15. 완료 기준
 
