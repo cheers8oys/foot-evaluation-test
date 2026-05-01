@@ -69,9 +69,9 @@ describe("buildResultUrl()", () => {
   });
 
   it("복수 케이스 URL 생성", () => {
-    expect(
-      buildResultUrl({ primaryCase: "case2", matchedCases: ["case2", "case3"] }),
-    ).toBe("/result?primary=case2&cases=case2,case3");
+    expect(buildResultUrl({ primaryCase: "case2", matchedCases: ["case2", "case3"] })).toBe(
+      "/result?primary=case2&cases=case2,case3",
+    );
   });
 
   it("default 단독 URL 생성", () => {

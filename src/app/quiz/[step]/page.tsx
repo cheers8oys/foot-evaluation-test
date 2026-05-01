@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
+import { QuizStep } from "@/components/quiz-step";
+import { QUESTIONS, TOTAL_STEPS } from "@/lib/constants/questions";
 
 type QuizStepPageProps = {
   params: Promise<{
@@ -17,13 +18,10 @@ export default async function QuizStepPage({ params }: QuizStepPageProps) {
   }
 
   return (
-    <AppShell
-      title={`문항 ${stepNumber}`}
-      description="질문 데이터와 선택 인터랙션은 후속 단계에서 구현합니다."
-    >
-      <div className="placeholder-card">
-        <p>진행 표시, 선택 카드, 이전/다음 버튼은 이 라우트에 연결될 예정입니다.</p>
-      </div>
-    </AppShell>
+    <QuizStep
+      question={QUESTIONS[stepNumber - 1]}
+      stepNumber={stepNumber}
+      totalSteps={TOTAL_STEPS}
+    />
   );
 }
