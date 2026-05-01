@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Next.js Boilerplate",
-  description: "Empty Next.js boilerplate project",
+  title: "시즈탱크 발 유형 테스트",
+  description: "시즈탱크 발 유형 테스트 MVP",
 };
 
 export default function RootLayout({
