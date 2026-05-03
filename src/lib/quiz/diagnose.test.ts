@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { diagnose, buildResultUrl, validateResultParams } from "./diagnose";
+import { diagnose, buildResultUrl, validateResultParams, validateResultUrl } from "./diagnose";
 import type { Answers } from "@/lib/types";
 
 const allA: Answers = {
@@ -111,5 +111,29 @@ describe("validateResultParams()", () => {
   it("default 단독은 유효", () => {
     const r = validateResultParams("default", "default");
     expect(r?.primaryCase).toBe("default");
+  });
+
+  it("cases 중복이면 null", () => {
+    expect(validateResultParams("case2", "case2,case2")).toBeNull();
+  });
+});
+
+describe("validateResultUrl()", () => {
+  it("내부 결과 URL이면 canonical 결과 URL을 반환한다", () => {
+    expect(validateResultUrl("/result?primary=case2&cases=case2,case3")).toBe(
+      "/result?primary=case2&cases=case2,case3",
+    );
+  });
+
+  it("외부 URL이면 null", () => {
+    expect(validateResultUrl("https://example.com/result?primary=case2&cases=case2")).toBeNull();
+  });
+
+  it("result가 아닌 경로면 null", () => {
+    expect(validateResultUrl("/privacy?primary=case2&cases=case2")).toBeNull();
+  });
+
+  it("예상하지 않은 추가 query가 있으면 null", () => {
+    expect(validateResultUrl("/result?primary=case2&cases=case2&utm_source=kakao")).toBeNull();
   });
 });

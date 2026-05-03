@@ -20,6 +20,7 @@ export function buildResultUrl(result: DiagnosisResult): string {
 }
 
 const ALLOWED: Set<string> = new Set(["case1", "case2", "case3", "case4", "default"]);
+const RESULT_QUERY_KEYS: Set<string> = new Set(["primary", "cases"]);
 
 export function validateResultParams(
   primary: string | null,
@@ -29,9 +30,39 @@ export function validateResultParams(
   if (!ALLOWED.has(primary)) return null;
 
   const caseList = cases.split(",");
+  if (caseList.length === 0) return null;
+  if (new Set(caseList).size !== caseList.length) return null;
   if (caseList.some((c) => !ALLOWED.has(c))) return null;
   if (!caseList.includes(primary)) return null;
   if (caseList.includes("default") && caseList.length > 1) return null;
 
   return { primaryCase: primary as CaseId, matchedCases: caseList as CaseId[] };
+}
+
+export function validateResultSearchParams(searchParams: URLSearchParams): DiagnosisResult | null {
+  const keys = Array.from(searchParams.keys());
+  if (keys.length !== RESULT_QUERY_KEYS.size) return null;
+  if (keys.some((key) => !RESULT_QUERY_KEYS.has(key))) return null;
+
+  return validateResultParams(searchParams.get("primary"), searchParams.get("cases"));
+}
+
+export function validateResultUrl(url: string | null): string | null {
+  if (!url) return null;
+
+  const base = new URL("http://local.test");
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url, base);
+  } catch {
+    return null;
+  }
+
+  if (parsed.origin !== base.origin || parsed.pathname !== "/result" || parsed.hash) return null;
+
+  const validated = validateResultSearchParams(parsed.searchParams);
+  if (!validated) return null;
+
+  return buildResultUrl(validated);
 }

@@ -1,13 +1,21 @@
 import { AppShell } from "@/components/app-shell";
+import { PRIVACY_COPY } from "@/lib/constants/copy";
 
 export default function PrivacyPage() {
   return (
-    <AppShell
-      title="개인정보 처리방침"
-      description="정식 문구 연결 전 기본 라우트 자리만 준비했습니다."
-    >
-      <div className="placeholder-card">
-        <p>수집 항목, 이용 목적, 보유 기간, 수신 거부 방법은 후속 단계에서 연결합니다.</p>
+    <AppShell title={PRIVACY_COPY.title} description={PRIVACY_COPY.description}>
+      {PRIVACY_COPY.sections.map((section) => (
+        <section key={section.heading} className="info-card">
+          <h2 className="info-card__title">{section.heading}</h2>
+          <ul className="info-list">
+            {section.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <div className="info-card">
+        <p className="info-card__body">{PRIVACY_COPY.reviewNotice}</p>
       </div>
     </AppShell>
   );

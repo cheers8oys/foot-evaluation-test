@@ -134,7 +134,9 @@ a {
 
 /* ──────────────── Button ──────────────── */
 .btn {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   min-height: 52px;
   border: none;
@@ -144,6 +146,8 @@ a {
   cursor: pointer;
   transition: opacity 0.15s;
   font-family: inherit;
+  text-align: center;
+  text-decoration: none;
 }
 
 .btn--primary {
@@ -397,6 +401,108 @@ a {
   margin: 0;
   font-size: 13px;
   color: #c0392b;
+}
+
+.info-card,
+.result-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.info-card__title,
+.result-card__section-title,
+.result-card__title {
+  margin: 0;
+}
+
+.info-card__title,
+.result-card__section-title {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.info-card__body,
+.result-card__body,
+.result-card__headline,
+.result-card__summary {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.info-list,
+.result-list,
+.action-stack {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.info-list,
+.result-list {
+  padding-left: 18px;
+}
+
+.info-list li,
+.result-list__item {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.result-card {
+  display: grid;
+  gap: 12px;
+}
+
+.result-card--hero {
+  gap: 10px;
+  background:
+    linear-gradient(180deg, rgba(239, 226, 208, 0.9), rgba(255, 255, 255, 0.76)),
+    rgba(255, 255, 255, 0.72);
+}
+
+.result-card__eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.result-card__title {
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.result-card__headline {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.result-card__summary {
+  color: var(--muted);
+}
+
+.result-list__item {
+  display: grid;
+  gap: 4px;
+}
+
+.result-card__body--label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.text-link {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 @keyframes spinner {

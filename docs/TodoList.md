@@ -157,10 +157,10 @@
 
 ## 8. 결과 페이지와 제출 완료 화면 구현
 
-- [ ] `/quiz/submitted` 상태별 UI 구현
-- [ ] `/result` 대표 결과/추가 패턴 UI 구현
-- [ ] `primary`, `cases` URL 검증 연결
-- [ ] `/privacy`와 `404` 화면 구현
+- [x] `/quiz/submitted` 상태별 UI 구현
+- [x] `/result` 대표 결과/추가 패턴 UI 구현
+- [x] `primary`, `cases` URL 검증 연결
+- [x] `/privacy`와 `404` 화면 구현
 
 검증:
 
