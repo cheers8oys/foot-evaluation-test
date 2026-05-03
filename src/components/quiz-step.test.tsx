@@ -4,9 +4,9 @@ import { QuizStep } from "./quiz-step";
 import { QUESTIONS } from "@/lib/constants/questions";
 
 vi.mock("next/image", () => ({
-  default: ({ src, alt }: { src: string; alt: string }) => (
+  default: ({ src, alt, sizes }: { src: string; alt: string; sizes?: string }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} />
+    <img src={src} alt={alt} sizes={sizes} />
   ),
 }));
 
@@ -69,6 +69,31 @@ describe("QuizStep 렌더링", () => {
     render(<QuizStep question={q1} stepNumber={1} totalSteps={8} />);
     expect(screen.getByAltText(q1.optionA)).toBeInTheDocument();
     expect(screen.getByAltText(q1.optionB)).toBeInTheDocument();
+  });
+
+  it("이미지는 기존 quiz 폴더 경로를 사용한다", () => {
+    render(<QuizStep question={q1} stepNumber={1} totalSteps={8} />);
+    expect(screen.getByAltText(q1.optionA)).toHaveAttribute("src", "/images/quiz/q1-a.jpg");
+    expect(screen.getByAltText(q1.optionB)).toHaveAttribute("src", "/images/quiz/q1-b.jpg");
+  });
+
+  it("PC에서는 더 큰 이미지 리소스를 요청할 수 있도록 sizes를 넓게 설정한다", () => {
+    render(<QuizStep question={q1} stepNumber={1} totalSteps={8} />);
+
+    expect(screen.getByAltText(q1.optionA)).toHaveAttribute(
+      "sizes",
+      "(max-width: 767px) 50vw, (max-width: 1023px) 220px, 470px",
+    );
+    expect(screen.getByAltText(q1.optionB)).toHaveAttribute(
+      "sizes",
+      "(max-width: 767px) 50vw, (max-width: 1023px) 220px, 470px",
+    );
+  });
+
+  it("이미지와 하단 버튼 사이 빈 공간용 spacer를 렌더링하지 않는다", () => {
+    const { container } = render(<QuizStep question={q1} stepNumber={1} totalSteps={8} />);
+
+    expect(container.querySelector(".quiz-page__spacer")).not.toBeInTheDocument();
   });
 
   it("진행 표시에 stepNumber / totalSteps가 표시된다", () => {

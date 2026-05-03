@@ -94,14 +94,12 @@ export function QuizStep({ question, stepNumber, totalSteps }: QuizStepProps) {
               src={`/images/quiz/q${stepNumber}-${opt.toLowerCase()}.jpg`}
               alt={opt === "A" ? question.optionA : question.optionB}
               fill
-              sizes="(max-width: 480px) 50vw, 220px"
+              sizes="(max-width: 767px) 50vw, (max-width: 1023px) 220px, 470px"
               style={{ objectFit: "contain" }}
             />
           </button>
         ))}
       </div>
-
-      <div className="quiz-page__spacer" />
 
       <div className="quiz-page__footer">
         <div className="quiz-nav">
