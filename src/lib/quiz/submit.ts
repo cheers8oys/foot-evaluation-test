@@ -157,11 +157,15 @@ export async function validateSubmitPayload(
   };
 }
 
-export function buildSubmitSuccessResponse(result: DiagnosisResult): SubmitSuccessResponse {
+export function buildSubmitSuccessResponse(
+  result: DiagnosisResult,
+  status: SubmitStatus,
+  resultUrl?: string,
+): SubmitSuccessResponse {
   return {
     ok: true,
-    status: "created",
-    resultUrl: buildResultUrl(result),
+    status,
+    resultUrl: resultUrl ?? buildResultUrl(result),
     messageSent: false,
   };
 }

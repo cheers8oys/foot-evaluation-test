@@ -6,9 +6,34 @@ import { createStartToken } from "@/lib/quiz/token";
 
 import { POST } from "./route";
 
+const { mockFindByPhone, mockAppendRow } = vi.hoisted(() => ({
+  mockFindByPhone: vi.fn(),
+  mockAppendRow: vi.fn(),
+}));
+
+vi.mock("@/lib/sheets/client", () => ({
+  getSheetsConfig: vi.fn().mockReturnValue({
+    clientEmail: "test@project.iam.gserviceaccount.com",
+    privateKey: "FAKE_KEY",
+    spreadsheetId: "SPREADSHEET_ID",
+    sheetName: "테스트",
+  }),
+  createSheetsClient: vi.fn().mockReturnValue({}),
+  SheetsConfigError: class SheetsConfigError extends Error {},
+}));
+
+vi.mock("@/lib/sheets/repository", () => ({
+  createSheetsRepository: vi.fn().mockReturnValue({
+    findByPhone: mockFindByPhone,
+    appendRow: mockAppendRow,
+  }),
+}));
+
 describe("POST /api/submit", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    mockFindByPhone.mockReset();
+    mockAppendRow.mockReset();
   });
 
   async function makeValidRequest() {
@@ -42,9 +67,11 @@ describe("POST /api/submit", () => {
     });
   }
 
-  it("정상 요청은 created 응답을 반환한다", async () => {
+  it("신규 번호는 appendRow를 호출하고 created를 반환한다", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-01T12:00:20.000Z"));
+    mockFindByPhone.mockResolvedValue(null);
+    mockAppendRow.mockResolvedValue(undefined);
 
     const response = await POST(await makeValidRequest());
     const payload = await response.json();
@@ -53,6 +80,65 @@ describe("POST /api/submit", () => {
     expect(payload.ok).toBe(true);
     expect(payload.status).toBe("created");
     expect(payload.resultUrl).toBe("/result?primary=case2&cases=case2,case3");
+    expect(mockAppendRow).toHaveBeenCalledOnce();
+
+    vi.useRealTimers();
+  });
+
+  it("중복 번호는 appendRow를 호출하지 않고 duplicate를 반환한다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-01T12:00:20.000Z"));
+    mockFindByPhone.mockResolvedValue({
+      createdAt: "2026-04-01T10:00:00+09:00",
+      name: "기존유저",
+      phone: "01012345678",
+      resultType: "case1",
+      consentVersion: "v1",
+    });
+
+    const response = await POST(await makeValidRequest());
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.status).toBe("duplicate");
+    expect(payload.resultUrl).toBe("/result?primary=case1&cases=case1");
+    expect(mockAppendRow).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it("중복 번호는 messageSent가 false다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-01T12:00:20.000Z"));
+    mockFindByPhone.mockResolvedValue({
+      createdAt: "2026-04-01T10:00:00+09:00",
+      name: "기존유저",
+      phone: "01012345678",
+      resultType: "case3",
+      consentVersion: "v1",
+    });
+
+    const response = await POST(await makeValidRequest());
+    const payload = await response.json();
+
+    expect(payload.messageSent).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it("appendRow 실패 시 SHEET_WRITE_FAILED 500을 반환한다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-01T12:00:20.000Z"));
+    mockFindByPhone.mockResolvedValue(null);
+    mockAppendRow.mockRejectedValue(new Error("Sheets API error"));
+
+    const response = await POST(await makeValidRequest());
+    const payload = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(payload.ok).toBe(false);
+    expect(payload.errorCode).toBe("SHEET_WRITE_FAILED");
 
     vi.useRealTimers();
   });

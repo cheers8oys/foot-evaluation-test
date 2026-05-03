@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { ERROR_MESSAGES } from "@/lib/constants/copy";
+import { SheetsConfigError, createSheetsClient, getSheetsConfig } from "@/lib/sheets/client";
+import { createSheetsRepository } from "@/lib/sheets/repository";
 import {
   SubmitValidationError,
   buildSubmitSuccessResponse,
   validateSubmitPayload,
 } from "@/lib/quiz/submit";
 import { SessionTokenConfigError } from "@/lib/quiz/token";
+
+function toKSTISOString(date: Date): string {
+  const kstOffset = 9 * 60;
+  const kstDate = new Date(date.getTime() + kstOffset * 60 * 1000);
+  return kstDate.toISOString().replace("Z", "+09:00");
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -25,7 +33,29 @@ export async function POST(request: Request) {
 
   try {
     const submission = await validateSubmitPayload(body);
-    return NextResponse.json(buildSubmitSuccessResponse(submission.result));
+
+    const config = getSheetsConfig();
+    const sheets = createSheetsClient(config);
+    const repo = createSheetsRepository(sheets, config);
+
+    const existing = await repo.findByPhone(submission.normalizedPhone);
+
+    if (existing) {
+      const resultUrl = `/result?primary=${existing.resultType}&cases=${existing.resultType}`;
+      return NextResponse.json(
+        buildSubmitSuccessResponse(submission.result, "duplicate", resultUrl),
+      );
+    }
+
+    await repo.appendRow({
+      createdAt: toKSTISOString(new Date()),
+      name: submission.name,
+      phone: submission.normalizedPhone,
+      resultType: submission.result.primaryCase,
+      consentVersion: submission.consentVersion,
+    });
+
+    return NextResponse.json(buildSubmitSuccessResponse(submission.result, "created"));
   } catch (error) {
     if (error instanceof SubmitValidationError) {
       return NextResponse.json(
@@ -38,7 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (error instanceof SessionTokenConfigError) {
+    if (error instanceof SessionTokenConfigError || error instanceof SheetsConfigError) {
       return NextResponse.json(
         {
           ok: false,
@@ -52,8 +82,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        errorCode: "SUBMIT_FAILED",
-        message: ERROR_MESSAGES.SUBMIT_FAILED,
+        errorCode: "SHEET_WRITE_FAILED",
+        message: ERROR_MESSAGES.SHEET_WRITE_FAILED,
       },
       { status: 500 },
     );

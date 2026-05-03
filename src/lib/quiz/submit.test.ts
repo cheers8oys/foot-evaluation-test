@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONSENT_VERSION } from "@/lib/constants/consent";
 
 import { createStartToken } from "./token";
-import { SubmitValidationError, parseAnswers, validateSubmitPayload } from "./submit";
+import {
+  SubmitValidationError,
+  buildSubmitSuccessResponse,
+  parseAnswers,
+  validateSubmitPayload,
+} from "./submit";
 
 describe("submit validation", () => {
   afterEach(() => {
@@ -120,5 +125,29 @@ describe("submit validation", () => {
 describe("parseAnswers()", () => {
   it("8개 답변이 모두 있어야 한다", () => {
     expect(() => parseAnswers({ q1: "A" })).toThrowError(SubmitValidationError);
+  });
+});
+
+describe("buildSubmitSuccessResponse()", () => {
+  const dummyResult = { primaryCase: "case1" as const, matchedCases: ["case1" as const] };
+
+  it("status와 resultUrl을 그대로 반환한다", () => {
+    const response = buildSubmitSuccessResponse(
+      dummyResult,
+      "duplicate",
+      "/result?primary=case1&cases=case1",
+    );
+
+    expect(response.ok).toBe(true);
+    expect(response.status).toBe("duplicate");
+    expect(response.resultUrl).toBe("/result?primary=case1&cases=case1");
+    expect(response.messageSent).toBe(false);
+  });
+
+  it("resultUrl 미전달 시 result로 URL을 생성한다", () => {
+    const response = buildSubmitSuccessResponse(dummyResult, "created");
+
+    expect(response.status).toBe("created");
+    expect(response.resultUrl).toBe("/result?primary=case1&cases=case1");
   });
 });
