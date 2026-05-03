@@ -5,21 +5,49 @@ import { useRouter } from "next/navigation";
 import { INTRO_COPY } from "@/lib/constants/copy";
 import { clearTestSession, saveSessionStart } from "@/lib/quiz/storage";
 
+type StartSessionResponse =
+  | {
+      ok: true;
+      startToken: string;
+      expiresAt: string;
+    }
+  | {
+      ok: false;
+      errorCode: string;
+      message: string;
+    };
+
 export default function Home() {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleStart() {
     setStatus("loading");
+    setErrorMessage(null);
     try {
       const res = await fetch("/api/session/start", { method: "POST" });
-      if (!res.ok) throw new Error();
-      const { startToken } = (await res.json()) as { startToken: string };
+      const payload = (await res.json()) as StartSessionResponse;
+
+      if (!res.ok || !payload.ok) {
+        throw new Error(
+          payload.ok === false
+            ? payload.message
+            : "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+        );
+      }
+
+      const { startToken } = payload;
       clearTestSession();
       saveSessionStart(startToken);
       router.push("/quiz/1");
-    } catch {
+    } catch (error) {
       setStatus("error");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+      );
     }
   }
 
@@ -43,9 +71,7 @@ export default function Home() {
               {status === "loading" ? "시작하는 중…" : INTRO_COPY.ctaLabel}
             </button>
             {status === "error" && (
-              <p className="intro-page__error">
-                일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.
-              </p>
+              <p className="intro-page__error">{errorMessage ?? INTRO_COPY.genericError}</p>
             )}
           </div>
           <a href="/privacy" className="intro-page__privacy-link">

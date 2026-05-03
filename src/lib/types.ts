@@ -38,3 +38,5 @@ export type Question = {
   optionA: string;
   optionB: string;
 };
+
+export type SubmitStatus = "created" | "duplicate";

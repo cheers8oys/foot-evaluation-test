@@ -18,6 +18,19 @@ export const INTRO_COPY = {
   subtitle: "8개의 간단한 선택으로 발과 몸의 사용 패턴을 확인해 보세요.",
   estimatedTime: "약 1분",
   ctaLabel: "테스트 시작하기",
+  genericError: "일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+} as const;
+
+export const ANALYZING_COPY = {
+  title: "발 사용 패턴을 확인하고 있어요",
+  description: "답변을 바탕으로 대표 유형과 함께 나타난 패턴을 정리 중입니다.",
+} as const;
+
+export const CONTACT_COPY = {
+  title: "결과지를 받을 이름과 휴대폰 번호를 입력해 주세요",
+  description: "결과 링크를 카카오톡 또는 문자로 보내드립니다.",
+  submitLabel: "결과지 받기",
+  resetLabel: "처음부터 다시 진행하기",
 } as const;
 
 export const PLACEHOLDER_COPY = {
